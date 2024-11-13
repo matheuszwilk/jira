@@ -7,7 +7,6 @@ export const getWorkspaces = async () => {
   const { databases, account } = await createSessionClient();
 
   const user = await account.get();
-
   const members = await databases.listDocuments(
     DATABASE_ID,
     MEMBERS_ID,
@@ -17,7 +16,6 @@ export const getWorkspaces = async () => {
   if (members.total === 0) {
     return { documents: [], total: 0 };
   }
-
   const workspaceIds = members.documents.map((member) => member.workspaceId);
 
   const workspaces = await databases.listDocuments(

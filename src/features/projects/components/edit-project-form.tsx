@@ -140,6 +140,8 @@ export const EditProjectForm = ({ onCancel, initialValues }: EditProjectFormProp
                             <Image
                               alt="Logo"
                               fill
+                              priority
+                              unoptimized
                               className="object-cover"
                               src={
                                 field.value instanceof File
