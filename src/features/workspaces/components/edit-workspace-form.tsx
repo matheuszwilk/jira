@@ -170,6 +170,8 @@ export const EditWorkspaceForm = ({ onCancel, initialValues }: EditWorkspaceForm
                             <Image
                               alt="Logo"
                               fill
+                              priority
+                              unoptimized
                               className="object-cover"
                               src={
                                 field.value instanceof File

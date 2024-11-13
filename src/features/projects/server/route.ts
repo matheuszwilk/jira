@@ -13,6 +13,7 @@ import { sessionMiddleware } from "@/lib/session-middleware";
 import { createProjectSchema, updateProjectSchema } from "../schemas";
 
 import { Project } from "../types";
+import {uploadFile} from "@/features/files/utils";
 
 const app = new Hono()
   .post(
@@ -36,22 +37,7 @@ const app = new Hono()
         return c.json({ error: "Unathorized" }, 401);
       }
 
-      let uploadedImageUrl: string | undefined;
-
-      if (image instanceof File) {
-        const file = await storage.createFile(
-          IMAGES_BUCKET_ID,
-          ID.unique(),
-          image,
-        );
-
-        const arrayBuffer = await storage.getFilePreview(
-          IMAGES_BUCKET_ID,
-          file.$id,
-        );
-
-        uploadedImageUrl = `data:image/png;base64,${Buffer.from(arrayBuffer).toString("base64")}`;
-      }
+      const imageUrl = await uploadFile({storage, image})
 
       const project = await databases.createDocument(
         DATABASE_ID,
@@ -59,7 +45,7 @@ const app = new Hono()
         ID.unique(),
         {
           name,
-          imageUrl: uploadedImageUrl,
+          imageUrl,
           workspaceId
         },
       );
@@ -158,24 +144,7 @@ const app = new Hono()
         return c.json({ error: "Unauthorized" }, 401);
       }
 
-      let uploadedImageUrl: string | undefined;
-
-      if (image instanceof File) {
-        const file = await storage.createFile(
-          IMAGES_BUCKET_ID,
-          ID.unique(),
-          image,
-        );
-
-        const arrayBuffer = await storage.getFilePreview(
-          IMAGES_BUCKET_ID,
-          file.$id,
-        );
-
-        uploadedImageUrl = `data:image/png;base64,${Buffer.from(arrayBuffer).toString("base64")}`;
-      } else {
-        uploadedImageUrl = image;
-      } 
+      const imageUrl = await uploadFile({storage, image})
 
       const project = await databases.updateDocument(
         DATABASE_ID,
@@ -183,7 +152,7 @@ const app = new Hono()
         projectId,
         {
           name,
-          imageUrl: uploadedImageUrl
+          imageUrl
         }
       );
 
