@@ -1,13 +1,14 @@
 import { Hono } from "hono";
-import { ID } from "node-appwrite";
 import { deleteCookie, setCookie } from "hono/cookie";
 import { zValidator } from "@hono/zod-validator";
+import bcrypt from 'bcrypt';
 
 import { createAdminClient } from "@/lib/appwrite";
 import { sessionMiddleware } from "@/lib/session-middleware";
 
 import { AUTH_COOKIE } from "../constants";
 import { loginSchema, registerSchema } from "../schemas";
+import prisma from "../../../../lib/db";
 
 const app = new Hono()
   .get(
@@ -25,13 +26,23 @@ const app = new Hono()
     async (c) => {
       const { email, password } = c.req.valid("json");
 
-      const { account } = await createAdminClient();
-      const session = await account.createEmailPasswordSession(
-        email,
-        password,
-      );
+      const user = await prisma.users.findFirst({
+        where: {
+          email
+        }
+      })
 
-      setCookie(c, AUTH_COOKIE, session.secret, {
+      if (!user) {
+        throw new Error('User email does not exists')
+      }
+
+      const isMatch = await bcrypt.compare(password, user.password);
+
+      if(!isMatch) {
+        throw new Error('User password is invalid')
+      }
+
+      setCookie(c, AUTH_COOKIE, user.id, {
         path: "/",
         httpOnly: true,
         secure: true,
@@ -47,29 +58,13 @@ const app = new Hono()
     zValidator("json", registerSchema),
     async (c) => {
       const { name, email, password } = c.req.valid("json");
-
-      const { account } = await createAdminClient();
-      await account.create(
-        ID.unique(),
-        email,
-        password,
-        name,
-      );
-
-      const session = await account.createEmailPasswordSession(
-        email,
-        password,
-      );
-
-      setCookie(c, AUTH_COOKIE, session.secret, {
-        path: "/",
-        httpOnly: true,
-        secure: true,
-        sameSite: "strict",
-        maxAge: 60 * 60 * 24 * 30,
-      });
-
-      return c.json({ success: true });
+      const hash = await bcrypt.hash(password, 10);
+      const user = await prisma.users.create({
+        data: {
+          name, email, password: hash
+        }
+      })
+      return c.json({ success: true, uid: user.id });
     }
   )
   .post("/logout", sessionMiddleware, async (c) => {
