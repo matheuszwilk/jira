@@ -1,8 +1,2 @@
-import { Models } from "node-appwrite";
-
-export type Workspace = Models.Document & {
-  name: string;
-  imageUrl: string;
-  inviteCode: string;
-  userId: string;
-};
+import {workspaces} from '@prisma/client'
+export type Workspace = workspaces

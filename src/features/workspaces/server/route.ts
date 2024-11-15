@@ -22,6 +22,7 @@ import {
 import {Workspace} from "../types";
 import {createWorkspaceSchema, updateWorkspaceSchema} from "../schemas";
 import {uploadFile} from "@/features/files/utils";
+import db from "../../../../lib/db";
 
 const app = new Hono()
   .get("/", sessionMiddleware, async (c) => {
@@ -92,31 +93,27 @@ const app = new Hono()
     zValidator("form", createWorkspaceSchema),
     sessionMiddleware,
     async (c) => {
-      const databases = c.get("databases");
-      const storage = c.get("storage");
       const user = c.get("user");
 
       const {name, image} = c.req.valid("form");
 
-      const imageUrl = await uploadFile({storage, image})
-
-      const workspace = await databases.createDocument(
-        DATABASE_ID,
-        WORKSPACES_ID,
-        ID.unique(),
-        {
+      const imageUrl = await uploadFile(image)
+      const workspace = await db.workspaces.create({
+        data: {
           name,
-          userId: user.$id,
-          imageUrl,
+          userId: user.id,
+          imageUrl: imageUrl as string,
           inviteCode: generateInviteCode(6),
         }
-      );
+      })
 
-      await databases.createDocument(DATABASE_ID, MEMBERS_ID, ID.unique(), {
-        userId: user.$id,
-        workspaceId: workspace.$id,
-        role: MemberRole.ADMIN,
-      });
+      await db.members.create({
+        data: {
+          userId: user.id,
+          workspaceId: workspace.id,
+          role: MemberRole.ADMIN,
+        }
+      })
 
       return c.json({data: workspace});
     }

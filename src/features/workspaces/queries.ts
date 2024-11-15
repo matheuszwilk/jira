@@ -1,31 +1,31 @@
-import { Query } from "node-appwrite";
-
-import { createSessionClient } from "@/lib/appwrite";
-import { DATABASE_ID, MEMBERS_ID, WORKSPACES_ID } from "@/config";
+import { createSessionClient } from "@/lib/auth";
+import db from "../../../lib/db";
 
 export const getWorkspaces = async () => {
-  const { databases, account } = await createSessionClient();
+  const { account } = await createSessionClient();
 
   const user = await account.get();
-  const members = await databases.listDocuments(
-    DATABASE_ID,
-    MEMBERS_ID,
-    [Query.equal("userId", user.$id)]
-  );
+  const members = await db.members.findMany({
+    where: {
+      userId: user.id
+    }
+  })
 
-  if (members.total === 0) {
+  if (members.length === 0) {
     return { documents: [], total: 0 };
   }
-  const workspaceIds = members.documents.map((member) => member.workspaceId);
+  const workspaceIds = members.map((member) => member.workspaceId);
 
-  const workspaces = await databases.listDocuments(
-    DATABASE_ID,
-    WORKSPACES_ID,
-    [
-      Query.orderDesc("$createdAt"),
-      Query.contains("$id", workspaceIds)
-    ],
-  );
+  const workspaces = await db.workspaces.findMany({
+    where: {
+      id: {
+        in: workspaceIds
+      }
+    },
+    orderBy: {
+      createdAt: 'desc'
+    }
+  })
 
   return workspaces;
 };

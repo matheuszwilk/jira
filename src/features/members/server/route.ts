@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import { Query } from "node-appwrite";
 import { zValidator } from "@hono/zod-validator";
 
-import { createAdminClient } from "@/lib/appwrite";
+import { createAdminClient } from "@/lib/auth";
 import { DATABASE_ID, MEMBERS_ID } from "@/config";
 import { sessionMiddleware } from "@/lib/session-middleware";
 

@@ -6,7 +6,7 @@ import { zValidator } from "@hono/zod-validator";
 import { getMember } from "@/features/members/utils";
 import { Project } from "@/features/projects/types";
 
-import { createAdminClient } from "@/lib/appwrite";
+import { createAdminClient } from "@/lib/auth";
 import { sessionMiddleware } from "@/lib/session-middleware";
 import { DATABASE_ID, MEMBERS_ID, PROJECTS_ID, TASKS_ID } from "@/config";
 

@@ -5,7 +5,8 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["omitApi"]
 }
 
 datasource db {
@@ -14,43 +15,53 @@ datasource db {
 }
 
 model tasks {
-  id          String @id @default(cuid())
+  id          String   @id @default(cuid())
   name        String
   assigneeId  Int
   dueDate     String
   description String
   workspaceId String
   projectId   String
-  stauts      Status @default(BACKLOG)
+  status      Status   @default(BACKLOG)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
 }
 
 model projects {
-  id          String @id @default(cuid())
+  id          String   @id @default(cuid())
   name        String
   imageUrl    String
   workspaceId String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
 }
 
 model members {
-  id          String @id @default(cuid())
+  id          String   @id @default(cuid())
   userId      String
   workspaceId String
-  role        Role   @default(MEMBER)
+  role        Role     @default(MEMBER)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
 }
 
 model workspaces {
-  id         String @id @default(cuid())
+  id         String   @id @default(cuid())
   name       String
   imageUrl   String
   inviteCode String
   userId     String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 model users {
-  id       String @id @default(cuid())
-  name     String
-  email    String @unique
-  password String
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 enum Role {

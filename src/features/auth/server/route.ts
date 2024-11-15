@@ -3,13 +3,11 @@ import { deleteCookie, setCookie } from "hono/cookie";
 import { zValidator } from "@hono/zod-validator";
 import bcrypt from 'bcrypt';
 
-import { createAdminClient } from "@/lib/appwrite";
+import {AUTH_EXPIRES_IN, createSession} from "@/lib/auth";
 import { sessionMiddleware } from "@/lib/session-middleware";
-
 import { AUTH_COOKIE } from "../constants";
 import { loginSchema, registerSchema } from "../schemas";
 import prisma from "../../../../lib/db";
-
 const app = new Hono()
   .get(
     "/current",
@@ -42,12 +40,14 @@ const app = new Hono()
         throw new Error('User password is invalid')
       }
 
-      setCookie(c, AUTH_COOKIE, user.id, {
+      const token = createSession(user)
+
+      setCookie(c, AUTH_COOKIE, token, {
         path: "/",
         httpOnly: true,
         secure: true,
         sameSite: "strict",
-        maxAge: 60 * 60 * 24 * 30,
+        maxAge: AUTH_EXPIRES_IN,
       });
 
       return c.json({ success: true });
@@ -64,14 +64,22 @@ const app = new Hono()
           name, email, password: hash
         }
       })
-      return c.json({ success: true, uid: user.id });
+
+      const token = createSession(user)
+
+      setCookie(c, AUTH_COOKIE, token, {
+        path: "/",
+        httpOnly: true,
+        secure: true,
+        sameSite: "strict",
+        maxAge: AUTH_EXPIRES_IN,
+      });
+
+      return c.json({ success: true });
     }
   )
   .post("/logout", sessionMiddleware, async (c) => {
-    const account = c.get("account");
-
     deleteCookie(c, AUTH_COOKIE);
-    await account.deleteSession("current");
 
     return c.json({ success: true });
   });

@@ -34,7 +34,9 @@
     "date-fns": "^4.1.0",
     "formdata-node": "^6.0.3",
     "hono": "^4.6.3",
+    "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.447.0",
+    "minio": "^8.0.2",
     "next": "14.2.14",
     "next-themes": "^0.3.0",
     "node-appwrite": "14.0.0",
@@ -56,6 +58,8 @@
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/minio": "^7.1.1",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-big-calendar": "1.8.11",
