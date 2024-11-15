@@ -20,8 +20,8 @@ export const TaskDescription = ({ task }: TaskDescriptionProps) => {
 
   const handleSave = () => {
     mutate({ 
-      json: { description: value },
-      param: { taskId: task.$id }
+      json: { description: value ?? undefined },
+      param: { taskId: task.id }
     }, {
       onSuccess: () => {
         setIsEditing(false);
@@ -47,7 +47,7 @@ export const TaskDescription = ({ task }: TaskDescriptionProps) => {
         <div className="flex flex-col gap-y-4">
           <Textarea
             placeholder="Add a description..."
-            value={value}
+            value={value ?? undefined}
             rows={4}
             onChange={(e) => setValue(e.target.value)}
             disabled={isPending}

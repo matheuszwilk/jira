@@ -41,7 +41,7 @@ export const MembersList = () => {
     isPending: isUpdatingMember
   } = useUpdateMember();
 
-  const handleUpdateMember = (memberId: string, role: MemberRole) => {
+  const handleUpdateMember = (memberId: string, role: keyof typeof MemberRole) => {
     updateMember({
       json: { role },
       param: { memberId },
@@ -78,7 +78,7 @@ export const MembersList = () => {
       </div>
       <CardContent className="p-7">
         {data?.documents.map((member, index) => (
-          <Fragment key={member.$id}>
+          <Fragment key={member.id}>
             <div className="flex items-center gap-2">
               <MemberAvatar
                 className="size-10"
@@ -102,21 +102,21 @@ export const MembersList = () => {
                 <DropdownMenuContent side="bottom" align="end">
                   <DropdownMenuItem
                     className="font-medium"
-                    onClick={() => handleUpdateMember(member.$id, MemberRole.ADMIN)}
+                    onClick={() => handleUpdateMember(member.id, MemberRole.ADMIN)}
                     disabled={isUpdatingMember}
                   >
                     Set as Administrator
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="font-medium"
-                    onClick={() => handleUpdateMember(member.$id, MemberRole.MEMBER)}
+                    onClick={() => handleUpdateMember(member.id, MemberRole.MEMBER)}
                     disabled={isUpdatingMember}
                   >
                     Set as Member
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="font-medium text-amber-700"
-                    onClick={() => handleDeleteMember(member.$id)}
+                    onClick={() => handleDeleteMember(member.id)}
                     disabled={isDeletingMember}
                   >
                     Remove {member.name}

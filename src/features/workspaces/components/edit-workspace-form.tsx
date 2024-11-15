@@ -76,7 +76,7 @@ export const EditWorkspaceForm = ({ onCancel, initialValues }: EditWorkspaceForm
     if (!ok) return;
 
     deleteWorkspace({
-      param: { workspaceId: initialValues.$id },
+      param: { workspaceId: initialValues.id },
     }, {
       onSuccess: () => {
         window.location.href = "/";
@@ -90,7 +90,7 @@ export const EditWorkspaceForm = ({ onCancel, initialValues }: EditWorkspaceForm
     if (!ok) return;
 
     resetInviteCode({
-      param: { workspaceId: initialValues.$id },
+      param: { workspaceId: initialValues.id },
     });
   };
 
@@ -102,7 +102,7 @@ export const EditWorkspaceForm = ({ onCancel, initialValues }: EditWorkspaceForm
 
     mutate({
       form: finalValues,
-      param: { workspaceId: initialValues.$id }
+      param: { workspaceId: initialValues.id }
     });
   };
 
@@ -113,7 +113,7 @@ export const EditWorkspaceForm = ({ onCancel, initialValues }: EditWorkspaceForm
     }
   };
 
-  const fullInviteLink = `${window.location.origin}/workspaces/${initialValues.$id}/join/${initialValues.inviteCode}`;
+  const fullInviteLink = `${window.location.origin}/workspaces/${initialValues.id}/join/${initialValues.inviteCode}`;
 
   const handleCopyInviteLink = () => {
     navigator.clipboard.writeText(fullInviteLink)
@@ -126,7 +126,7 @@ export const EditWorkspaceForm = ({ onCancel, initialValues }: EditWorkspaceForm
       <ResetDialog />
       <Card className="w-full h-full border-none shadow-none">
         <CardHeader className="flex flex-row items-center gap-x-4 p-7 space-y-0">
-          <Button size="sm" variant="secondary" onClick={onCancel ? onCancel : () => router.push(`/workspaces/${initialValues.$id}`)}>
+          <Button size="sm" variant="secondary" onClick={onCancel ? onCancel : () => router.push(`/workspaces/${initialValues.id}`)}>
             <ArrowLeftIcon className="size-4 mr-2" />
             Back
           </Button>

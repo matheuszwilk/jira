@@ -1,7 +1,6 @@
-import { Models } from "node-appwrite";
-
-export type Project = Models.Document & {
+export type Project = {
   name: string;
-  imageUrl: string;
+  id: string;
+  imageUrl: string | null;
   workspaceId: string;
 };

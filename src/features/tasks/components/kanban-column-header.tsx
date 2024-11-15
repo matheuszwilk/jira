@@ -14,11 +14,11 @@ import { TaskStatus } from "../types";
 import { useCreateTaskModal } from "../hooks/use-create-task-modal";
 
 interface KanbanColumnHeaderProps {
-  board: TaskStatus;
+  board: keyof typeof TaskStatus;
   taskCount: number;
 };
 
-const statusIconMap: Record<TaskStatus, React.ReactNode> = {
+const statusIconMap: Record<keyof typeof TaskStatus, React.ReactNode> = {
   [TaskStatus.BACKLOG]: (
     <CircleDashedIcon className="size-[18px] text-pink-400" />
   ),

@@ -1,20 +1,17 @@
-import { Models } from "node-appwrite";
+import { $Enums, members, projects, tasks } from "@prisma/client";
 
-export enum TaskStatus {
-  BACKLOG = "BACKLOG",
-  TODO = "TODO",
-  IN_PROGRESS = "IN_PROGRESS",
-  IN_REVIEW = "IN_REVIEW",
-  DONE = "DONE"
-};
+export const TaskStatus = { ...$Enums.Status }
 
-export type Task = Models.Document & {
-  name: string;
-  status: TaskStatus;
-  workspaceId: string;
-  assigneeId: string;
-  projectId: string;
-  position: number;
-  dueDate: string;
-  description?: string;
+export type Task = Omit<tasks, 'createdAt' | 'updatedAt'> & {
+  createdAt: string;
+  updatedAt: string;
+  project: Omit<projects, 'createdAt' | 'updatedAt'> & {
+    createdAt: string, updatedAt: string 
+  };
+  assignee: Omit<members, 'createdAt' | 'updatedAt'> & {
+    name: string, 
+    email: string, 
+    createdAt: string, 
+    updatedAt: string 
+  }
 };

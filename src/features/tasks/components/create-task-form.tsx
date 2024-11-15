@@ -36,7 +36,7 @@ import { useCreateTask } from "../api/use-create-task";
 
 interface CreateTaskFormProps {
   onCancel?: () => void;
-  projectOptions: { id: string, name: string, imageUrl: string }[];
+  projectOptions: { id: string, name: string, imageUrl: string | null }[];
   memberOptions: { id: string, name: string }[];
 };
 
@@ -202,7 +202,7 @@ export const CreateTaskForm = ({ onCancel, projectOptions, memberOptions }: Crea
                               <ProjectAvatar
                                 className="size-6"
                                 name={project.name}
-                                image={project.imageUrl}
+                                image={project.imageUrl ?? undefined}
                               />
                               {project.name}
                             </div>

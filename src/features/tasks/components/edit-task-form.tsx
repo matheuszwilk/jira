@@ -35,7 +35,7 @@ import { useUpdateTask } from "../api/use-update-task";
 
 interface EditTaskFormProps {
   onCancel?: () => void;
-  projectOptions: { id: string, name: string, imageUrl: string }[];
+  projectOptions: { id: string, name: string, imageUrl: string | null }[];
   memberOptions: { id: string, name: string }[];
   initialValues: Task;
 };
@@ -47,12 +47,13 @@ export const EditTaskForm = ({ onCancel, projectOptions, memberOptions, initialV
     resolver: zodResolver(createTaskSchema.omit({ workspaceId: true, description: true, })),
     defaultValues: {
       ...initialValues,
+      description: initialValues.description ? initialValues.description : undefined,
       dueDate: initialValues.dueDate ? new Date(initialValues.dueDate) : undefined,
-    },
+    }
   });
 
   const onSubmit = (values: z.infer<typeof createTaskSchema>) => {
-    mutate({ json: values, param: { taskId: initialValues.$id } }, {
+    mutate({ json: values, param: { taskId: initialValues.id } }, {
       onSuccess: () => {
         form.reset();
         onCancel?.();
@@ -202,7 +203,7 @@ export const EditTaskForm = ({ onCancel, projectOptions, memberOptions, initialV
                               <ProjectAvatar
                                 className="size-6"
                                 name={project.name}
-                                image={project.imageUrl}
+                                image={project.imageUrl ?? undefined}
                               />
                               {project.name}
                             </div>

@@ -35,7 +35,7 @@ export const TaskBreadcrumbs = ({
     const ok = await confirm();
     if (!ok) return;
 
-    mutate({ param: { taskId: task.$id } }, {
+    mutate({ param: { taskId: task.id } }, {
       onSuccess: () => {
         router.push(`/workspaces/${workspaceId}/tasks`);
       },
@@ -47,10 +47,10 @@ export const TaskBreadcrumbs = ({
       <ConfirmDialog />
       <ProjectAvatar
         name={project.name}
-        image={project.imageUrl}
+        image={project.imageUrl ?? undefined}
         className="size-6 lg:size-8"
       />
-      <Link href={`/workspaces/${workspaceId}/projects/${project.$id}`}>
+      <Link href={`/workspaces/${workspaceId}/projects/${project.id}`}>
         <p className="text-sm lg:text-lg font-semibold text-muted-foreground hover:opacity-75 transition">
           {project.name}
         </p>

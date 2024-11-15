@@ -56,7 +56,7 @@ export const columns: ColumnDef<Task>[] = [
           <ProjectAvatar
             className="size-6"
             name={project.name}
-            image={project.imageUrl}
+            image={project.imageUrl ?? undefined}
           />
           <p className="line-clamp-1">{project.name}</p>
         </div>
@@ -132,7 +132,7 @@ export const columns: ColumnDef<Task>[] = [
   {
     id: "actions",
     cell: ({ row }) => {
-      const id = row.original.$id;
+      const id = row.original.id;
       const projectId = row.original.projectId;
 
       return (

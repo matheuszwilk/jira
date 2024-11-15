@@ -15,11 +15,11 @@ interface EventCardProps {
   title: string;
   assignee: Member;
   project: Project;
-  status: TaskStatus;
+  status: keyof typeof TaskStatus;
   id: string;
 };
 
-const statusColorMap: Record<TaskStatus, string> = {
+const statusColorMap: Record<keyof typeof TaskStatus, string> = {
   [TaskStatus.BACKLOG]: "border-l-pink-500",
   [TaskStatus.TODO]: "border-l-red-500",
   [TaskStatus.IN_PROGRESS]: "border-l-yellow-500",
@@ -59,7 +59,7 @@ export const EventCard = ({
           <div className="size-1 rounded-full bg-neutral-300" />
           <ProjectAvatar
             name={project?.name}
-            image={project?.imageUrl}
+            image={project?.imageUrl ?? undefined}
           />
         </div>
       </div>

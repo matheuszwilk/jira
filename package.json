@@ -6,12 +6,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "postinstall": "bunx prisma generate"
   },
   "dependencies": {
     "@hello-pangea/dnd": "^17.0.0",
     "@hono/zod-validator": "^0.3.0",
     "@hookform/resolvers": "^3.9.0",
+    "@prisma/client": "5.22.0",
     "@radix-ui/react-avatar": "^1.1.1",
     "@radix-ui/react-checkbox": "^1.1.2",
     "@radix-ui/react-dialog": "^1.1.2",
@@ -26,12 +28,15 @@
     "@radix-ui/react-tabs": "^1.1.1",
     "@tanstack/react-query": "5.59.0",
     "@tanstack/react-table": "8.20.5",
+    "bcrypt": "^5.1.1",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "formdata-node": "^6.0.3",
     "hono": "^4.6.3",
+    "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.447.0",
+    "minio": "^8.0.2",
     "next": "14.2.14",
     "next-themes": "^0.3.0",
     "node-appwrite": "14.0.0",
@@ -52,6 +57,9 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/minio": "^7.1.1",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-big-calendar": "1.8.11",
@@ -59,7 +67,9 @@
     "eslint": "^8",
     "eslint-config-next": "14.2.14",
     "postcss": "^8",
+    "prisma": "^5.22.0",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
-  }
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }

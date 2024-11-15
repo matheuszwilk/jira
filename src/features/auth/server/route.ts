@@ -1,14 +1,13 @@
 import { Hono } from "hono";
-import { ID } from "node-appwrite";
 import { deleteCookie, setCookie } from "hono/cookie";
 import { zValidator } from "@hono/zod-validator";
+import bcrypt from 'bcrypt';
 
-import { createAdminClient } from "@/lib/appwrite";
+import {AUTH_EXPIRES_IN, createSession} from "@/lib/auth";
 import { sessionMiddleware } from "@/lib/session-middleware";
-
 import { AUTH_COOKIE } from "../constants";
 import { loginSchema, registerSchema } from "../schemas";
-
+import prisma from "../../../../lib/db";
 const app = new Hono()
   .get(
     "/current",
@@ -25,18 +24,30 @@ const app = new Hono()
     async (c) => {
       const { email, password } = c.req.valid("json");
 
-      const { account } = await createAdminClient();
-      const session = await account.createEmailPasswordSession(
-        email,
-        password,
-      );
+      const user = await prisma.users.findFirst({
+        where: {
+          email
+        }
+      })
 
-      setCookie(c, AUTH_COOKIE, session.secret, {
+      if (!user) {
+        throw new Error('User email does not exists')
+      }
+
+      const isMatch = await bcrypt.compare(password, user.password);
+
+      if(!isMatch) {
+        throw new Error('User password is invalid')
+      }
+
+      const token = createSession(user)
+
+      setCookie(c, AUTH_COOKIE, token, {
         path: "/",
         httpOnly: true,
         secure: true,
         sameSite: "strict",
-        maxAge: 60 * 60 * 24 * 30,
+        maxAge: AUTH_EXPIRES_IN,
       });
 
       return c.json({ success: true });
@@ -47,36 +58,28 @@ const app = new Hono()
     zValidator("json", registerSchema),
     async (c) => {
       const { name, email, password } = c.req.valid("json");
+      const hash = await bcrypt.hash(password, 10);
+      const user = await prisma.users.create({
+        data: {
+          name, email, password: hash
+        }
+      })
 
-      const { account } = await createAdminClient();
-      await account.create(
-        ID.unique(),
-        email,
-        password,
-        name,
-      );
+      const token = createSession(user)
 
-      const session = await account.createEmailPasswordSession(
-        email,
-        password,
-      );
-
-      setCookie(c, AUTH_COOKIE, session.secret, {
+      setCookie(c, AUTH_COOKIE, token, {
         path: "/",
         httpOnly: true,
         secure: true,
         sameSite: "strict",
-        maxAge: 60 * 60 * 24 * 30,
+        maxAge: AUTH_EXPIRES_IN,
       });
 
       return c.json({ success: true });
     }
   )
   .post("/logout", sessionMiddleware, async (c) => {
-    const account = c.get("account");
-
     deleteCookie(c, AUTH_COOKIE);
-    await account.deleteSession("current");
 
     return c.json({ success: true });
   });
