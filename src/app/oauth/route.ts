@@ -1,5 +1,6 @@
 // import { cookies } from "next/headers";
-// import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+
 
 // import { AUTH_COOKIE } from "@/features/auth/constants";
 
@@ -23,3 +24,7 @@
 
 //   return NextResponse.redirect(`${request.nextUrl.origin}/`);
 // }
+
+export async function GET(request: NextRequest) {
+    return NextResponse.redirect(`${request.nextUrl.origin}/`);
+}
