@@ -21,7 +21,6 @@ const app = new Hono<{ Bindings: HonoBindings }>()
     sessionMiddleware,
     zValidator("form", createProjectSchema),
     async (c) => {
-      const storage = c.get("storage");
       const user = c.get("user");
       const { name, image, workspaceId } = c.req.valid("form");
 
@@ -34,12 +33,12 @@ const app = new Hono<{ Bindings: HonoBindings }>()
         return c.json({ error: "Unauthorized" }, 401);
       }
 
-      const imageUrl: string = await uploadFile({storage, image})
+      const imageUrl = await uploadFile(image)
 
       const project = await prisma.projects.create({
         data: {
           name,
-          imageUrl,
+          imageUrl: imageUrl as string,
           workspaceId
         }
       });
@@ -114,7 +113,6 @@ const app = new Hono<{ Bindings: HonoBindings }>()
     sessionMiddleware,
     zValidator("form", updateProjectSchema),
     async (c) => {
-      const storage = c.get("storage");
       const user = c.get("user");
       const { projectId } = c.req.param();
       const { name, image } = c.req.valid("form");
@@ -138,7 +136,7 @@ const app = new Hono<{ Bindings: HonoBindings }>()
         return c.json({ error: "Unauthorized" }, 401);
       }
 
-      const imageUrl: string = await uploadFile({storage, image})
+      const imageUrl = await uploadFile(image)
 
       const project = await prisma.projects.update({
         where: {
@@ -146,7 +144,7 @@ const app = new Hono<{ Bindings: HonoBindings }>()
         },
         data: {
           name,
-          imageUrl
+          imageUrl: imageUrl as string
         }
       });
 
@@ -254,7 +252,7 @@ const app = new Hono<{ Bindings: HonoBindings }>()
       const thisMonthAssignedTasks = await prisma.tasks.count({
         where: {
           projectId,
-          assigneeId: parseInt(member.id),
+          assigneeId: member.id,
           createdAt: {
             gte: thisMonthStart,
             lte: thisMonthEnd
@@ -265,7 +263,7 @@ const app = new Hono<{ Bindings: HonoBindings }>()
       const lastMonthAssignedTasks = await prisma.tasks.count({
         where: {
           projectId,
-          assigneeId: parseInt(member.id),
+          assigneeId: member.id,
           createdAt: {
             gte: lastMonthStart,
             lte: lastMonthEnd

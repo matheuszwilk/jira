@@ -1,25 +1,14 @@
+import { $Enums } from '@prisma/client';
 import {z} from "zod";
 import {Hono} from "hono";
-import {ID, Query} from "node-appwrite";
 import {zValidator} from "@hono/zod-validator";
 import {endOfMonth, startOfMonth, subMonths} from "date-fns";
 
-import {MemberRole} from "@/features/members/types";
-import {TaskStatus} from "@/features/tasks/types";
 import {getMember} from "@/features/members/utils";
 
 import {generateInviteCode} from "@/lib/utils";
 import {sessionMiddleware} from "@/lib/session-middleware";
-import {
-  APP_URL,
-  DATABASE_ID,
-  IMAGES_BUCKET_ID,
-  MEMBERS_ID,
-  TASKS_ID,
-  WORKSPACES_ID,
-} from "@/config";
 
-import {Workspace} from "../types";
 import {createWorkspaceSchema, updateWorkspaceSchema} from "../schemas";
 import {uploadFile} from "@/features/files/utils";
 import db from "../../../../lib/db";
@@ -27,62 +16,69 @@ import db from "../../../../lib/db";
 const app = new Hono()
   .get("/", sessionMiddleware, async (c) => {
     const user = c.get("user");
-    const databases = c.get("databases");
 
-    const members = await databases.listDocuments(DATABASE_ID, MEMBERS_ID, [
-      Query.equal("userId", user.$id),
-    ]);
+    const members = await db.members.findMany({
+      where: {
+        userId: user.id,
+      },
+    });
 
-    if (members.total === 0) {
-      return c.json({data: {documents: [], total: 0}});
+    if (members.length === 0) {
+      return c.json({data: []});
     }
 
-    const workspaceIds = members.documents.map((member) => member.workspaceId);
+    const workspaceIds = members.map((member) => member.workspaceId);
 
-    const workspaces = await databases.listDocuments(
-      DATABASE_ID,
-      WORKSPACES_ID,
-      [Query.orderDesc("$createdAt"), Query.contains("$id", workspaceIds)]
-    );
+    const workspaces = await db.workspaces.findMany({
+      where: {
+        id: {
+          in: workspaceIds,
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
 
     return c.json({data: workspaces});
   })
   .get("/:workspaceId", sessionMiddleware, async (c) => {
     const user = c.get("user");
-    const databases = c.get("databases");
     const {workspaceId} = c.req.param();
 
     const member = await getMember({
-      databases,
       workspaceId,
-      userId: user.$id,
+      userId: user.id,
     });
 
     if (!member) {
       return c.json({error: "Unauthorized"}, 401);
     }
 
-    const workspace = await databases.getDocument<Workspace>(
-      DATABASE_ID,
-      WORKSPACES_ID,
-      workspaceId
-    );
+    const workspace = await db.workspaces.findUnique({
+      where: {
+        id: workspaceId,
+      },
+    });
 
     return c.json({data: workspace});
   })
   .get("/:workspaceId/info", sessionMiddleware, async (c) => {
-    const databases = c.get("databases");
     const {workspaceId} = c.req.param();
 
-    const workspace = await databases.getDocument<Workspace>(
-      DATABASE_ID,
-      WORKSPACES_ID,
-      workspaceId
-    );
+    const workspace = await db.workspaces.findUnique({
+      where: {
+        id: workspaceId,
+      },
+    });
+
+    if (!workspace) {
+      throw new Error("Workspace not found");
+    }
 
     return c.json({
       data: {
-        $id: workspace.$id,
+        id: workspace.id,
         name: workspace.name,
         imageUrl: workspace.imageUrl,
       },
@@ -111,7 +107,7 @@ const app = new Hono()
         data: {
           userId: user.id,
           workspaceId: workspace.id,
-          role: MemberRole.ADMIN,
+          role: $Enums.Role.ADMIN,
         }
       })
 
@@ -123,84 +119,81 @@ const app = new Hono()
     sessionMiddleware,
     zValidator("form", updateWorkspaceSchema),
     async (c) => {
-      const databases = c.get("databases");
-      const storage = c.get("storage");
       const user = c.get("user");
 
       const {workspaceId} = c.req.param();
       const {name, image} = c.req.valid("form");
 
       const member = await getMember({
-        databases,
         workspaceId,
-        userId: user.$id,
+        userId: user.id,
       });
 
-      if (!member || member.role !== MemberRole.ADMIN) {
+      if (!member || member.role !== $Enums.Role.ADMIN) {
         return c.json({error: "Unauthorized"}, 401);
       }
 
-      const imageUrl = await uploadFile({storage, image})
+      const imageUrl = await uploadFile(image)
 
-      const workspace = await databases.updateDocument(
-        DATABASE_ID,
-        WORKSPACES_ID,
-        workspaceId,
-        {
+      const workspace = await db.workspaces.update({
+        where: {
+          id: workspaceId,
+        },
+        data: {
           name,
-          imageUrl,
-        }
-      );
+          imageUrl: imageUrl as string,
+        },
+      });
 
       return c.json({data: workspace});
     }
   )
   .delete("/:workspaceId", sessionMiddleware, async (c) => {
-    const databases = c.get("databases");
     const user = c.get("user");
 
     const {workspaceId} = c.req.param();
 
     const member = await getMember({
-      databases,
       workspaceId,
-      userId: user.$id,
+      userId: user.id,
     });
 
-    if (!member || member.role !== MemberRole.ADMIN) {
+    if (!member || member.role !== $Enums.Role.ADMIN) {
       return c.json({error: "Unauthorized"}, 401);
     }
 
     // TODO: Delete members, projects, and tasks
 
-    await databases.deleteDocument(DATABASE_ID, WORKSPACES_ID, workspaceId);
+    await db.workspaces.delete({
+      where: {
+        id: workspaceId,
+      },
+    })
 
-    return c.json({data: {$id: workspaceId}});
+    return c.json({data: {id: workspaceId}});
   })
   .post("/:workspaceId/reset-invite-code", sessionMiddleware, async (c) => {
-    const databases = c.get("databases");
     const user = c.get("user");
 
     const {workspaceId} = c.req.param();
 
     const member = await getMember({
-      databases,
       workspaceId,
-      userId: user.$id,
+      userId: user.id,
     });
 
-    if (!member || member.role !== MemberRole.ADMIN) {
+    if (!member || member.role !== $Enums.Role.ADMIN) {
       return c.json({error: "Unauthorized"}, 401);
     }
 
-    const workspace = await databases.updateDocument(
-      DATABASE_ID,
-      WORKSPACES_ID,
-      workspaceId,
-      {
+    const workspace = await db.workspaces.update({
+      where: {
+        id: workspaceId,
+      },
+      data: {
         inviteCode: generateInviteCode(6),
-      }
-    );
+      },
+    });
 
     return c.json({data: workspace});
   })
@@ -212,47 +205,45 @@ const app = new Hono()
       const {workspaceId} = c.req.param();
       const {code} = c.req.valid("json");
 
-      const databases = c.get("databases");
       const user = c.get("user");
 
       const member = await getMember({
-        databases,
         workspaceId,
-        userId: user.$id,
+        userId: user.id,
       });
 
       if (member) {
         return c.json({error: "Already a member"}, 400);
       }
 
-      const workspace = await databases.getDocument<Workspace>(
-        DATABASE_ID,
-        WORKSPACES_ID,
-        workspaceId
-      );
+      const workspace = await db.workspaces.findUnique({
+        where: {
+          id: workspaceId,
+        },
+      });
 
-      if (workspace.inviteCode !== code) {
+      if (workspace?.inviteCode !== code) {
         return c.json({error: "Invalid invite code"}, 400);
       }
 
-      await databases.createDocument(DATABASE_ID, MEMBERS_ID, ID.unique(), {
-        workspaceId,
-        userId: user.$id,
-        role: MemberRole.MEMBER,
+      await db.members.create({
+        data: {
+          workspaceId,
+          userId: user.id,
+          role: $Enums.Role.MEMBER,
+        },
       });
 
       return c.json({data: workspace});
     }
   )
   .get("/:workspaceId/analytics", sessionMiddleware, async (c) => {
-    const databases = c.get("databases");
     const user = c.get("user");
     const {workspaceId} = c.req.param();
 
     const member = await getMember({
-      databases,
       workspaceId,
-      userId: user.$id,
+      userId: user.id,
     });
 
     if (!member) {
@@ -265,134 +256,146 @@ const app = new Hono()
     const lastMonthStart = startOfMonth(subMonths(now, 1));
     const lastMonthEnd = endOfMonth(subMonths(now, 1));
 
-    const thisMonthTasks = await databases.listDocuments(
-      DATABASE_ID,
-      TASKS_ID,
-      [
-        Query.equal("workspaceId", workspaceId),
-        Query.greaterThanEqual("$createdAt", thisMonthStart.toISOString()),
-        Query.lessThanEqual("$createdAt", thisMonthEnd.toISOString()),
-      ]
-    );
+    const thisMonthTasks = await db.tasks.count({
+      where: {
+        workspaceId,
+        createdAt: {
+          gte: thisMonthStart.toISOString(),
+          lte: thisMonthEnd.toISOString(),
+        },
+      },
+    });
 
-    const lastMonthTasks = await databases.listDocuments(
-      DATABASE_ID,
-      TASKS_ID,
-      [
-        Query.equal("workspaceId", workspaceId),
-        Query.greaterThanEqual("$createdAt", lastMonthStart.toISOString()),
-        Query.lessThanEqual("$createdAt", lastMonthEnd.toISOString()),
-      ]
-    );
+    const lastMonthTasks = await db.tasks.count({
+      where: {
+        workspaceId,
+        createdAt: {
+          gte: lastMonthStart.toISOString(),
+          lte: lastMonthEnd.toISOString(),
+        },
+      },
+    });
 
-    const taskCount = thisMonthTasks.total;
-    const taskDifference = taskCount - lastMonthTasks.total;
+    const taskCount = thisMonthTasks;
+    const taskDifference = taskCount - lastMonthTasks;
 
-    const thisMonthAssignedTasks = await databases.listDocuments(
-      DATABASE_ID,
-      TASKS_ID,
-      [
-        Query.equal("workspaceId", workspaceId),
-        Query.equal("assigneeId", member.$id),
-        Query.greaterThanEqual("$createdAt", thisMonthStart.toISOString()),
-        Query.lessThanEqual("$createdAt", thisMonthEnd.toISOString()),
-      ]
-    );
+    const thisMonthAssignedTasks = await db.tasks.count({
+      where: {
+        workspaceId,
+        assigneeId: member.id,
+        createdAt: {
+          gte: thisMonthStart.toISOString(),
+          lte: thisMonthEnd.toISOString(),
+        },
+      },
+    });
 
-    const lastMonthAssignedTasks = await databases.listDocuments(
-      DATABASE_ID,
-      TASKS_ID,
-      [
-        Query.equal("workspaceId", workspaceId),
-        Query.equal("assigneeId", member.$id),
-        Query.greaterThanEqual("$createdAt", lastMonthStart.toISOString()),
-        Query.lessThanEqual("$createdAt", lastMonthEnd.toISOString()),
-      ]
-    );
+    const lastMonthAssignedTasks = await db.tasks.count({
+      where: {
+        workspaceId,
+        assigneeId: member.id,
+        createdAt: {
+          gte: lastMonthStart.toISOString(),
+          lte: lastMonthEnd.toISOString(),
+        },
+      },
+    });
 
-    const assignedTaskCount = thisMonthAssignedTasks.total;
+    const assignedTaskCount = thisMonthAssignedTasks;
     const assignedTaskDifference =
-      assignedTaskCount - lastMonthAssignedTasks.total;
+      assignedTaskCount - lastMonthAssignedTasks;
 
-    const thisMonthIncompleteTasks = await databases.listDocuments(
-      DATABASE_ID,
-      TASKS_ID,
-      [
-        Query.equal("workspaceId", workspaceId),
-        Query.notEqual("status", TaskStatus.DONE),
-        Query.greaterThanEqual("$createdAt", thisMonthStart.toISOString()),
-        Query.lessThanEqual("$createdAt", thisMonthEnd.toISOString()),
-      ]
-    );
+    const thisMonthIncompleteTasks = await db.tasks.count({
+      where: {
+        workspaceId,
+        status: {
+          not: $Enums.Status.DONE,
+        },
+        createdAt: {
+          gte: thisMonthStart.toISOString(),
+          lte: thisMonthEnd.toISOString(),
+        },
+      },
+    });
 
-    const lastMonthIncompleteTasks = await databases.listDocuments(
-      DATABASE_ID,
-      TASKS_ID,
-      [
-        Query.equal("workspaceId", workspaceId),
-        Query.notEqual("status", TaskStatus.DONE),
-        Query.greaterThanEqual("$createdAt", lastMonthStart.toISOString()),
-        Query.lessThanEqual("$createdAt", lastMonthEnd.toISOString()),
-      ]
-    );
+    const lastMonthIncompleteTasks = await db.tasks.count({
+      where: {
+        workspaceId,
+        status: {
+          not: $Enums.Status.DONE,
+        },
+        createdAt: {
+          gte: lastMonthStart.toISOString(),
+          lte: lastMonthEnd.toISOString(),
+        },
+      },
+    });
 
-    const incompleteTaskCount = thisMonthIncompleteTasks.total;
+    const incompleteTaskCount = thisMonthIncompleteTasks;
     const incompleteTaskDifference =
-      incompleteTaskCount - lastMonthIncompleteTasks.total;
+      incompleteTaskCount - lastMonthIncompleteTasks;
 
-    const thisMonthCompletedTasks = await databases.listDocuments(
-      DATABASE_ID,
-      TASKS_ID,
-      [
-        Query.equal("workspaceId", workspaceId),
-        Query.equal("status", TaskStatus.DONE),
-        Query.greaterThanEqual("$createdAt", thisMonthStart.toISOString()),
-        Query.lessThanEqual("$createdAt", thisMonthEnd.toISOString()),
-      ]
-    );
+    const thisMonthCompletedTasks = await db.tasks.count({
+      where: {
+        workspaceId,
+        status: $Enums.Status.DONE,
+        createdAt: {
+          gte: thisMonthStart.toISOString(),
+          lte: thisMonthEnd.toISOString(),
+        },
+      },
+    });
 
-    const lastMonthCompletedTasks = await databases.listDocuments(
-      DATABASE_ID,
-      TASKS_ID,
-      [
-        Query.equal("workspaceId", workspaceId),
-        Query.equal("status", TaskStatus.DONE),
-        Query.greaterThanEqual("$createdAt", lastMonthStart.toISOString()),
-        Query.lessThanEqual("$createdAt", lastMonthEnd.toISOString()),
-      ]
-    );
+    const lastMonthCompletedTasks = await db.tasks.count({
+      where: {
+        workspaceId,
+        status: $Enums.Status.DONE,
+        createdAt: {
+          gte: lastMonthStart.toISOString(),
+          lte: lastMonthEnd.toISOString(),
+        },
+      },
+    });
 
-    const completedTaskCount = thisMonthCompletedTasks.total;
+    const completedTaskCount = thisMonthCompletedTasks;
     const completedTaskDifference =
-      completedTaskCount - lastMonthCompletedTasks.total;
+      completedTaskCount - lastMonthCompletedTasks;
 
-    const thisMonthOverdueTasks = await databases.listDocuments(
-      DATABASE_ID,
-      TASKS_ID,
-      [
-        Query.equal("workspaceId", workspaceId),
-        Query.notEqual("status", TaskStatus.DONE),
-        Query.lessThan("dueDate", now.toISOString()),
-        Query.greaterThanEqual("$createdAt", thisMonthStart.toISOString()),
-        Query.lessThanEqual("$createdAt", thisMonthEnd.toISOString()),
-      ]
-    );
+    const thisMonthOverdueTasks = await db.tasks.count({
+      where: {
+        workspaceId,
+        status: {
+          not: $Enums.Status.DONE,
+        },
+        dueDate: {
+          lt: now.toISOString(),
+        },
+        createdAt: {
+          gte: thisMonthStart.toISOString(),
+          lte: thisMonthEnd.toISOString(),
+        },
+      },
+    });
 
-    const lastMonthOverdueTasks = await databases.listDocuments(
-      DATABASE_ID,
-      TASKS_ID,
-      [
-        Query.equal("workspaceId", workspaceId),
-        Query.notEqual("status", TaskStatus.DONE),
-        Query.lessThan("dueDate", now.toISOString()),
-        Query.greaterThanEqual("$createdAt", lastMonthStart.toISOString()),
-        Query.lessThanEqual("$createdAt", lastMonthEnd.toISOString()),
-      ]
-    );
+    const lastMonthOverdueTasks = await db.tasks.count({
+      where: {
+        workspaceId,
+        status: {
+          not: $Enums.Status.DONE,
+        },
+        dueDate: {
+          lt: now.toISOString(),
+        },
+        createdAt: {
+          gte: lastMonthStart.toISOString(),
+          lte: lastMonthEnd.toISOString(),
+        },
+      },
+    });
 
-    const overdueTaskCount = thisMonthOverdueTasks.total;
+    const overdueTaskCount = thisMonthOverdueTasks;
     const overdueTaskDifference =
-      overdueTaskCount - lastMonthOverdueTasks.total;
+      overdueTaskCount - lastMonthOverdueTasks;
 
     return c.json({
       data: {

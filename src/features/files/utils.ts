@@ -1,13 +1,12 @@
-import {ID, Storage} from "node-appwrite";
 import {
   APP_URL,
-  IMAGES_BUCKET_ID,
   MINIO_ACCESS_KEY, MINIO_BUCKET,
   MINIO_SECRET_KEY,
   MINIO_SERVER_PORT,
   MINIO_SERVER_URL
 } from "@/config";
 import * as Minio from 'minio'
+import { Readable } from "stream";
 
 const minioClient = new Minio.Client({
   endPoint: MINIO_SERVER_URL,
@@ -17,7 +16,6 @@ const minioClient = new Minio.Client({
   secretKey: MINIO_SECRET_KEY
 })
 interface UploadFileProps {
-  storage: Storage;
   image: string | File | undefined;
 }
 
@@ -32,4 +30,8 @@ export const uploadFile = async (image: UploadFileProps['image']): Promise<strin
   }
 
   return imageUrl
+}
+
+export const getFile = async (imageId: string): Promise<Readable> => {
+  return minioClient.getObject(MINIO_BUCKET, imageId)
 }

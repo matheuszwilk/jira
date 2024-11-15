@@ -57,7 +57,7 @@ export const TaskViewSwitcher = ({ hideProjectFilter }: TaskViewSwitcherProps) =
   });
 
   const onKanbanChange = useCallback((
-    tasks: { $id: string; status: TaskStatus; position: number }[]
+    tasks: { id: string; status: keyof typeof TaskStatus; position: number }[]
   ) => {
     bulkUpdate({
       json: { tasks },

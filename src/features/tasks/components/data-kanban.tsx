@@ -10,8 +10,9 @@ import { KanbanCard } from "./kanban-card";
 import { KanbanColumnHeader } from "./kanban-column-header";
 
 import { Task, TaskStatus } from "../types";
+import {$Enums} from "@prisma/client";
 
-const boards: TaskStatus[] = [
+const boards: $Enums.Status[] = [
   TaskStatus.BACKLOG,
   TaskStatus.TODO,
   TaskStatus.IN_PROGRESS,
@@ -20,12 +21,12 @@ const boards: TaskStatus[] = [
 ];
 
 type TasksState = {
-  [key in TaskStatus]: Task[];
+  [key in keyof typeof TaskStatus]: Task[];
 };
 
 interface DataKanbanProps {
   data: Task[];
-  onChange: (tasks: { $id: string; status: TaskStatus; position: number }[]) => void;
+  onChange: (tasks: { id: string; status: keyof typeof TaskStatus; position: number }[]) => void;
 };
 
 export const DataKanban = ({
@@ -46,7 +47,7 @@ export const DataKanban = ({
     });
 
     Object.keys(initialTasks).forEach((status) => {
-      initialTasks[status as TaskStatus].sort((a, b) => a.position - b.position);
+      initialTasks[status as keyof typeof TaskStatus].sort((a, b) => a.position - b.position);
     });
 
     return initialTasks;
@@ -66,7 +67,7 @@ export const DataKanban = ({
     });
 
     Object.keys(newTasks).forEach((status) => {
-      newTasks[status as TaskStatus].sort((a, b) => a.position - b.position);
+      newTasks[status as keyof typeof TaskStatus].sort((a, b) => a.position - b.position);
     });
 
     setTasks(newTasks);
@@ -76,10 +77,10 @@ export const DataKanban = ({
     if (!result.destination) return;
 
     const { source, destination } = result;
-    const sourceStatus = source.droppableId as TaskStatus;
-    const destStatus = destination.droppableId as TaskStatus;
+    const sourceStatus = source.droppableId as keyof typeof TaskStatus;
+    const destStatus = destination.droppableId as keyof typeof TaskStatus;
 
-    let updatesPayload: { $id: string; status: TaskStatus; position: number; }[] = [];
+    let updatesPayload: { id: string; status: keyof typeof TaskStatus; position: number; }[] = [];
 
     setTasks((prevTasks) => {
       const newTasks = { ...prevTasks };
@@ -112,18 +113,18 @@ export const DataKanban = ({
 
       // Always update the moved task
       updatesPayload.push({
-        $id: updatedMovedTask.$id,
+        id: updatedMovedTask.id,
         status: destStatus,
         position: Math.min((destination.index + 1) * 1000, 1_000_000)
       });
 
       // Update positions for affected tasks in the destination column
       newTasks[destStatus].forEach((task, index) => {
-        if (task && task.$id !== updatedMovedTask.$id) {
+        if (task && task.id !== updatedMovedTask.id) {
           const newPosition = Math.min((index + 1) * 1000, 1_000_000);
           if (task.position !== newPosition) {
             updatesPayload.push({
-              $id: task.$id,
+              id: task.id,
               status: destStatus,
               position: newPosition,
             });
@@ -138,7 +139,7 @@ export const DataKanban = ({
             const newPosition = Math.min((index + 1) * 1000, 1_000_000);
             if (task.position !== newPosition) {
               updatesPayload.push({
-                $id: task.$id,
+                id: task.id,
                 status: sourceStatus,
                 position: newPosition,
               });
@@ -172,8 +173,8 @@ export const DataKanban = ({
                   >
                     {tasks[board].map((task, index) => (
                       <Draggable
-                        key={task.$id}
-                        draggableId={task.$id}
+                        key={task.id}
+                        draggableId={task.id}
                         index={index}
                       >
                         {(provided) => (

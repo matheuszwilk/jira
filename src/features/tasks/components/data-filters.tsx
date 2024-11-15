@@ -29,13 +29,13 @@ export const DataFilters = ({ hideProjectFilter }: DataFiltersProps) => {
 
   const isLoading = isLoadingProjects || isLoadingMembers;
 
-  const projectOptions = projects?.documents.map((project) => ({
-    value: project.$id,
+  const projectOptions = projects?.map((project) => ({
+    value: project.id,
     label: project.name,
   }));
 
   const memberOptions = members?.documents.map((member) => ({
-    value: member.$id,
+    value: member.id,
     label: member.name,
   }));
 
@@ -47,7 +47,7 @@ export const DataFilters = ({ hideProjectFilter }: DataFiltersProps) => {
   }, setFilters] = useTaskFilters();
 
   const onStatusChange = (value: string) => {
-    setFilters({ status: value === "all" ? null : value as TaskStatus });
+    setFilters({ status: value === "all" ? null : value as keyof typeof TaskStatus });
   };
 
   const onAssigneeChange = (value: string) => {

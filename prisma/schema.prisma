@@ -17,10 +17,11 @@ datasource db {
 model tasks {
   id          String   @id @default(cuid())
   name        String
-  assigneeId  Int
+  assigneeId  String
   dueDate     String
-  description String
+  description String?
   workspaceId String
+  position    Int      @default(1000)
   projectId   String
   status      Status   @default(BACKLOG)
   createdAt   DateTime @default(now())
@@ -30,7 +31,7 @@ model tasks {
 model projects {
   id          String   @id @default(cuid())
   name        String
-  imageUrl    String
+  imageUrl    String?
   workspaceId String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @default(now()) @updatedAt
@@ -48,7 +49,7 @@ model members {
 model workspaces {
   id         String   @id @default(cuid())
   name       String
-  imageUrl   String
+  imageUrl   String?
   inviteCode String
   userId     String
   createdAt  DateTime @default(now())

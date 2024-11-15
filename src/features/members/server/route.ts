@@ -1,14 +1,12 @@
+import { $Enums } from '@prisma/client';
 import { z } from "zod";
 import { Hono } from "hono";
-import { Query } from "node-appwrite";
 import { zValidator } from "@hono/zod-validator";
 
-import { createAdminClient } from "@/lib/auth";
-import { DATABASE_ID, MEMBERS_ID } from "@/config";
 import { sessionMiddleware } from "@/lib/session-middleware";
 
 import { getMember } from "../utils";
-import { Member, MemberRole } from "../types";
+import db from "../../../../lib/db";
 
 const app = new Hono()
   .get(
@@ -16,45 +14,46 @@ const app = new Hono()
     sessionMiddleware,
     zValidator("query", z.object({ workspaceId: z.string() })),
     async (c) => {
-      const { users } = await createAdminClient();
-      const databases = c.get("databases");
       const user = c.get("user");
       const { workspaceId } = c.req.valid("query");
 
       const member = await getMember({
-        databases,
         workspaceId,
-        userId: user.$id,
+        userId: user.id,
       });
 
       if (!member) {
         return c.json({ error: "Unauthorized" }, 401);
       }
 
-      const members = await databases.listDocuments<Member>(
-        DATABASE_ID,
-        MEMBERS_ID,
-        [Query.equal("workspaceId", workspaceId)]
-      );
+      const members = await db.members.findMany({
+        where: {
+          workspaceId,
+        }
+      });
 
       const populatedMembers = await Promise.all(
-        members.documents.map(async (member) => {
-          const user = await users.get(member.userId);
+        members.map(async (member) => {
+          const user = await db.users.findUnique({
+            where: {
+              id: member.userId
+            }
+          })
 
           return {
             ...member,
-            name: user.name || user.email,
-            email: user.email,
+            name: (user?.name || user?.email) ?? '',
+            email: user?.email ?? '',
           }
         })
       );
 
       return c.json({
         data: {
-          ...members,
-          documents: populatedMembers,
-        },
-      });
+          total: members.length,
+          documents: populatedMembers
+        }
+      })
     }
   )
   .delete(
@@ -63,98 +62,105 @@ const app = new Hono()
     async (c) => {
       const { memberId } = c.req.param();
       const user = c.get("user");
-      const databases = c.get("databases");
 
-      const memberToDelete = await databases.getDocument(
-        DATABASE_ID,
-        MEMBERS_ID,
-        memberId,
-      );
+      const memberToDelete = await db.members.findUnique({
+        where: {
+          id: memberId,
+        },
+      });
 
-      const allMembersInWorkspace = await databases.listDocuments(
-        DATABASE_ID,
-        MEMBERS_ID,
-        [Query.equal("workspaceId", memberToDelete.workspaceId)]
-      );
+      if (!memberToDelete) {
+        return c.json({ error: "Member not found" }, 404);
+      }
+
+      const allMembersInWorkspace = await db.members.findMany({
+        where: {
+          workspaceId: memberToDelete.workspaceId,
+        },
+      });
 
       const member = await getMember({
-        databases,
         workspaceId: memberToDelete.workspaceId,
-        userId: user.$id
+        userId: user.id,
       });
 
       if (!member) {
         return c.json({ error: "Unauthorized" }, 401);
       }
-      
-      if (member.$id !== memberToDelete.$id && member.role !== MemberRole.ADMIN) {
+
+      if (
+        member.id !== memberToDelete.id &&
+        member.role !== $Enums.Role.ADMIN
+      ) {
         return c.json({ error: "Unauthorized" }, 401);
       }
-      
-      if (allMembersInWorkspace.total === 1) {
+
+      if (allMembersInWorkspace.length === 1) {
         return c.json({ error: "Cannot delete the only member" }, 400);
       }
 
-      await databases.deleteDocument(
-        DATABASE_ID,
-        MEMBERS_ID,
-        memberId,
-      );
+      await db.members.delete({
+        where: {
+          id: memberId,
+        },
+      });
 
-      return c.json({ data: { $id: memberToDelete.$id } });
+      return c.json({ data: { id: memberToDelete.id } });
     }
   )
   .patch(
     "/:memberId",
     sessionMiddleware,
-    zValidator("json", z.object({ role: z.nativeEnum(MemberRole) })),
+    zValidator("json", z.object({ role: z.nativeEnum($Enums.Role) })),
     async (c) => {
       const { memberId } = c.req.param();
       const { role } = c.req.valid("json");
       const user = c.get("user");
-      const databases = c.get("databases");
 
-      const memberToUpdate = await databases.getDocument(
-        DATABASE_ID,
-        MEMBERS_ID,
-        memberId,
-      );
+      const memberToUpdate = await db.members.findUnique({
+        where: {
+          id: memberId,
+        },
+      });
 
-      const allMembersInWorkspace = await databases.listDocuments(
-        DATABASE_ID,
-        MEMBERS_ID,
-        [Query.equal("workspaceId", memberToUpdate.workspaceId)]
-      );
+      if (!memberToUpdate) {
+        return c.json({ error: "Member not found" }, 404);
+      }
+
+      const allMembersInWorkspace = await db.members.findMany({
+        where: {
+          workspaceId: memberToUpdate.workspaceId,
+        },
+      });
 
       const member = await getMember({
-        databases,
         workspaceId: memberToUpdate.workspaceId,
-        userId: user.$id
+        userId: user.id,
       });
 
       if (!member) {
         return c.json({ error: "Unauthorized" }, 401);
       }
-      
-      if (member.role !== MemberRole.ADMIN) {
+
+      if (member.role !== $Enums.Role.ADMIN) {
         return c.json({ error: "Unauthorized" }, 401);
       }
-      
-      if (allMembersInWorkspace.total === 1) {
+
+      if (allMembersInWorkspace.length === 1) {
         return c.json({ error: "Cannot downgrade the only member" }, 400);
       }
 
-      await databases.updateDocument(
-        DATABASE_ID,
-        MEMBERS_ID,
-        memberId,
-        {
+      await db.members.update({
+        where: {
+          id: memberId,
+        },
+        data: {
           role,
-        }
-      );
+        },
+      });
 
-      return c.json({ data: { $id: memberToUpdate.$id } });
+      return c.json({ data: { id: memberToUpdate.id } });
     }
-  )
+  );
 
 export default app;

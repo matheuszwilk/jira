@@ -1,18 +1,17 @@
 import {Hono} from "hono";
 import {sessionMiddleware} from "@/lib/session-middleware";
-import {IMAGES_BUCKET_ID} from "@/config";
+import { stream } from 'hono/streaming'
+import { getFile } from "../utils";
 
 const app = new Hono()
   .get("/:fileId", sessionMiddleware, async (c) => {
-    const storage = c.get("storage");
-    const {fileId} = c.req.param();
+    return stream(c, async (stream) => {
+      const file = await getFile(c.req.param().fileId);
 
-    const result = await storage.getFileView(
-      IMAGES_BUCKET_ID,
-      fileId
-    );
-
-    return c.body(result)
+      for await (const chunk of file) {
+        stream.write(chunk);
+      }
+    });
   })
 
 export default app;

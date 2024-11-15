@@ -1,12 +1,12 @@
-import { Models } from "node-appwrite";
+import { $Enums } from '@prisma/client';
 
-export enum MemberRole {
-  ADMIN = "ADMIN",
-  MEMBER = "MEMBER"
-};
+export const MemberRole = { ...$Enums.Role }
 
-export type Member = Models.Document & {
+export type Member = {
   workspaceId: string;
   userId: string;
-  role: MemberRole;
+  id: string;
+  name: string;
+  email: string;
+  role: $Enums.Role;
 };

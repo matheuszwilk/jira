@@ -18,14 +18,14 @@ export const CreateTaskFormWrapper = ({
   const { data: projects, isLoading: isLoadingProjects } = useGetProjects({ workspaceId });
   const { data: members, isLoading: isLoadingMembers } = useGetMembers({ workspaceId });
 
-  const projectOptions = projects?.documents.map((project) => ({
-    id: project.$id,
+  const projectOptions = projects?.map((project) => ({
+    id: project.id,
     name: project.name,
     imageUrl: project.imageUrl,
   }));
 
   const memberOptions = members?.documents.map((project) => ({
-    id: project.$id,
+    id: project.id,
     name: project.name,
   }));
 
